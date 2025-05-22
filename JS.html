@@ -1,0 +1,158 @@
+function register(name, email, password) {
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        
+        if (users.some(u => u.email === email)) {
+            return false;
+        }
+        
+        users.push({ name, email, password });
+        localStorage.setItem('users', JSON.stringify(users));
+        return true;
+    }
+    
+    function logout() {
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        updateUserUI();
+        renderTickets();
+    }
+    
+    function closeModal(modal) {
+        modal.style.display = 'none';
+    }
+    
+    eventForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!currentUser) {
+            alert('Please login to create events.');
+            return;
+        }
+        
+        const newEvent = {
+            id: generateId(),
+            name: document.getElementById('eventName').value,
+            date: document.getElementById('eventDate').value,
+            location: document.getElementById('eventLocation').value,
+            category: document.getElementById('eventCategory').value,
+            description: document.getElementById('eventDescription').value,
+            image: document.getElementById('eventImage').value,
+            price: parseFloat(document.getElementById('ticketPrice').value),
+            quantity: parseInt(document.getElementById('ticketQuantity').value),
+            creator: currentUser.email
+        };
+        
+        events.push(newEvent);
+        localStorage.setItem('events', JSON.stringify(events));
+        eventForm.reset();
+        renderEvents();
+        alert('Event created successfully!');
+    });
+    
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        if (login(email, password)) {
+            alert('Login successful!');
+        } else {
+            alert('Invalid credentials!');
+        }
+    });
+    
+    registerForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('registerName').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+        const confirm = document.getElementById('registerConfirm').value;
+        
+        if (password !== confirm) {
+            alert('Passwords do not match!');
+            return;
+        }
+        
+        if (register(name, email, password)) {
+            alert('Registration successful! Please login.');
+            closeModal(registerModal);
+        } else {
+            alert('Email already registered!');
+        }
+    });
+    
+    purchaseForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!currentUser) {
+            alert('Please login to purchase tickets.');
+            closeModal(ticketModal);
+            loginModal.style.display = 'flex';
+            return;
+        }
+        
+        const eventId = purchaseForm.getAttribute('data-event-id');
+        const event = events.find(e => e.id === eventId);
+        
+        if (!event) {
+            alert('Event not found!');
+            return;
+        }
+        
+        const quantity = parseInt(document.getElementById('purchaseQuantity').value);
+        const attendeeName = document.getElementById('attendeeName').value;
+        const attendeeEmail = document.getElementById('attendeeEmail').value;
+        
+        if (quantity > event.quantity) {
+            alert('Not enough tickets available!');
+            return;
+        }
+        
+        const newTicket = {
+            id: generateId(),
+            eventId,
+            quantity,
+            attendeeName,
+            attendeeEmail,
+            purchaseDate: new Date().toISOString(),
+            userEmail: currentUser.email
+        };
+        
+        event.quantity -= quantity;
+        tickets.push(newTicket);
+        
+        localStorage.setItem('events', JSON.stringify(events));
+        localStorage.setItem('tickets', JSON.stringify(tickets));
+        
+        alert(`Ticket purchased successfully! Total: $${(quantity * event.price).toFixed(2)}`);
+        purchaseForm.reset();
+        closeModal(ticketModal);
+        renderEvents();
+        renderTickets();
+    });
+    
+    searchEvents.addEventListener('input', filterEvents);
+    categoryFilter.addEventListener('change', filterEvents);
+    
+    loginBtn.addEventListener('click', () => loginModal.style.display = 'flex');
+    registerBtn.addEventListener('click', () => registerModal.style.display = 'flex');
+    createEventBtn.addEventListener('click', () => {
+        document.querySelector('#create').scrollIntoView({ behavior: 'smooth' });
+    });
+    
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            closeModal(modal);
+        });
+    });
+    
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeModal(e.target);
+        }
+    });
+    
+    renderEvents();
+    renderTickets();
+});
